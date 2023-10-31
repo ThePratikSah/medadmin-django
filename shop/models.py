@@ -1,11 +1,25 @@
 from django.db import models
 
 
-# Create your models here.
+class Brand(models.Model):
+    name = models.CharField(max_length=100)
+    image = models.ImageField(upload_to='images', null=True, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'brands'
+        verbose_name = 'brand'
+        verbose_name_plural = 'brands'
+
+    def __str__(self):
+        return self.name
+
+
 class Category(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
-    logo_url = models.URLField(null=True, blank=True)
+    logo_url = models.ImageField(null=True, blank=True, upload_to='images')
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
@@ -21,13 +35,13 @@ class Category(models.Model):
 class Product(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
-    price = models.IntegerField()
-    selling_price = models.IntegerField()
-    image = models.URLField()
+    image = models.ImageField(upload_to='images', null=True, blank=True)
     prescription_required = models.BooleanField(default=True)
     sku = models.CharField(max_length=100)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
+    brand = models.ForeignKey(Brand, null=True, blank=True, on_delete=models.CASCADE)
+    categories = models.ManyToManyField(Category, related_name='products')
 
     class Meta:
         ordering = ['name']
@@ -37,19 +51,25 @@ class Product(models.Model):
             models.Index(fields=['-created']),
         ]
 
+    def get_variations(self):
+        return ProductVariation.objects.filter(product=self)
+
     def __str__(self):
         return self.name
 
 
-class Brand(models.Model):
-    name = models.CharField(max_length=100)
+class ProductImage(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='images', null=True, blank=True)
     created = models.DateTimeField(auto_now_add=True)
     updated = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        db_table = 'brands'
-        verbose_name = 'brand'
-        verbose_name_plural = 'brands'
+
+class ProductVariation(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2)
 
     def __str__(self):
-        return self.name
+        return f"{self.product.name} - {self.name}"
